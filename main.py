@@ -3,15 +3,17 @@ import pandas as pd
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-data = pd.read_csv('student_data/student-mat.csv')
+student_data = pd.read_csv('student_student_data/student-mat.csv')
+
+# Separate the test set and the training set
 
 # In order to see the correlation between the weekday, and weekend alcohol use
 def graph_comparaison_weekend_weekdays(students=30):
     width = 0.33333
     
     x = np.arange(students)
-    y1 = data['Dalc'].values[:students]
-    y2 = data['Walc'].values[:students]
+    y1 = student_data['Dalc'].values[:students]
+    y2 = student_data['Walc'].values[:students]
 
     plt.bar(x - width, y1, label='Daily', width=width)
     plt.bar(x + width, y2, label='Weekends', width=width)
@@ -20,4 +22,6 @@ def graph_comparaison_weekend_weekdays(students=30):
     plt.show()
 
 # See the correlation of each column with the weekend consumption
-correlation_weekend_columns = data.corr()['Walc'].sort_values(ascending=False)
+correlation_weekend_columns = student_data.corr()['Walc'].sort_values(ascending=False)
+
+# Remove the daily 
