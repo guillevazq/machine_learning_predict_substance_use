@@ -1,13 +1,20 @@
+from os import write
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 import matplotlib.pyplot as plt
+import csv
 
 # Scikit learn utilities
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.model_selection import cross_val_score
+from sklearn.ensemble import RandomForestRegressor
 
 # Get the actual data
 student_data = pd.read_csv('student_data/student-mat.csv')
@@ -64,9 +71,73 @@ categorical_columns_pipeline = Pipeline(steps=[
     ('1_hot_encoding', OneHotEncoder())
 ])
 
+# Create the full pipeline with both types of categories
 full_pipeline = ColumnTransformer([
     ("numerical_columns_transformation", numerical_columns_pipeline, numerical_columns),
     ("categorical_columns_transformation", categorical_columns_pipeline, categorical_columns)
 ])
 
+# Call the pipeline with our data
 consumption_prepared = full_pipeline.fit_transform(consumption_before)
+
+# Remove the solutions before training the model
+del student_data["Walc"]
+
+def linear_regression_testing():
+    # Select a model (Linear regression)
+    lin_reg = LinearRegression()
+    lin_reg.fit(consumption_prepared, consumption_labels)
+
+    ln_predictions = lin_reg.predict(consumption_prepared)
+    lin_mse = mean_squared_error(consumption_labels, ln_predictions)
+    scores = cross_val_score(lin_reg, consumption_prepared, consumption_labels, scoring="neg_mean_squared_error", cv=10)
+
+    print("Scores: ", scores)
+    print("Mean: ", scores.mean())
+    print("Standard Deviation: ", scores.std())
+
+def decision_tree():
+    tree_reg = DecisionTreeRegressor()
+    tree_reg.fit(consumption_prepared, consumption_labels)
+
+    tree_predictions = tree_reg.predict(consumption_prepared)
+    tree_mse = mean_squared_error(consumption_labels, tree_predictions)
+    tree_rmse = np.sqrt(tree_mse)
+    print(tree_rmse)
+
+    scores = cross_val_score(tree_reg, consumption_prepared, consumption_labels, scoring="neg_mean_squared_error", cv=10)
+
+    print("Scores: ", scores)
+    print("Mean: ", scores.mean())
+    print("Standard Deviation: ", scores.std())
+
+forest_reg = RandomForestRegressor()
+forest_reg.fit(consumption_prepared, consumption_labels)
+
+forest_predictions = forest_reg.predict(consumption_prepared)
+forest_mse = mean_squared_error(consumption_labels, forest_predictions)
+forest_rmse = np.sqrt(forest_mse)
+
+
+# Save final results to file for clear representation
+predictions_np = np.round(forest_predictions)
+results_np = np.array(consumption_labels)
+
+predictions_pd = pd.DataFrame(np.round(predictions_np)).astype(int)
+results_pd = pd.DataFrame(results_np)
+
+df = pd.DataFrame()
+df[['predictions']] = predictions_pd
+df[['results']] = results_pd
+df.to_csv('save.csv')
+
+# Calculate accuracy
+predictions_arr = list(predictions_np)
+predictions_arr = [int(x) for x in predictions_arr]
+results_arr = list(results_np)
+
+correct_predictions = 0
+for pred, res in zip(predictions_arr, results_arr):
+    if pred == res: correct_predictions += 1 
+
+print("Precision: ", correct_predictions / len(predictions_arr) * 100)
